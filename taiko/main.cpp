@@ -26,12 +26,15 @@ EventQueue queue2(32 * EVENTS_EVENT_SIZE);
 Thread t;
 Thread t2(osPriorityNormal,120*1024/*120K stack size*/);
 
-int idC = 0, songnum = 0, status = 0, mode = 0;
+Timer timer;
+int score = 0;
 int16_t waveform[kAudioTxBufferSize];
 char serialInBuffer[42];
 int serialCount = 0;
 
-float song[3][42];
+int beats[10] = {1,0,2,0,0,1,1,0,2,2};
+
+int song[3] = {0,261,392};
 
 int song1[42] = {
   261, 261, 392, 392, 440, 440, 392,
@@ -48,6 +51,26 @@ int noteLength[42] = {
   1, 1, 1, 1, 1, 1, 2,
   1, 1, 1, 1, 1, 1, 2,
   1, 1, 1, 1, 1, 1, 2};
+
+void playNote2(){
+      for(int k = 0; k < 42; k++){
+        int length = noteLength[k];
+        while(length--)
+        {
+          for (int i = 0; i < kAudioTxBufferSize; i++)
+          {
+            waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song1[k])) * ((1<<16) - 1));
+          }
+          for(int j = 0; j < kAudioSampleFrequency / kAudioTxBufferSize; ++j)
+          {
+            audio.spk.play(waveform, kAudioTxBufferSize);
+          }
+          if(length <= 1) wait(1.0);
+        }
+      }
+      audio.spk.pause();
+}
+
 
 int PredictGesture(float* output) {
 
@@ -119,58 +142,28 @@ int PredictGesture(float* output) {
 
 }
 
-void loadSignal(void){
-  green_led = 0;
-  int i = 0;
-  serialCount = 0;
-  while(i < 42*3)
-  {
-    if(pc.readable())
-    {
-      serialInBuffer[serialCount] = pc.getc();
-      //printf("%c",serialInBuffer[serialCount]);
-      serialCount++;
-      if(serialCount == 7)
-      {
-        serialInBuffer[serialCount] = '\0';
-        song[i/42][i%42] = (float) atof(serialInBuffer);
-        serialCount = 0;
-        i++;
-      }
-    }
-  }
-  green_led = 1;
-}
-
 void playNote(){
-  //while(1){
-    //if(status == 1){
-      for(int k = 0; k < 42; k++){
-        
-        int length = noteLength[k];
-        while(length--)
-        {
-          for (int i = 0; i < kAudioTxBufferSize; i++)
-          {
-            //waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song1[k])) * ((1<<16) - 1));
-            waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song[songnum][k])) * ((1<<16) - 1));
-          }
-          for(int j = 0; j < kAudioSampleFrequency / kAudioTxBufferSize; ++j)
-          {
-            audio.spk.play(waveform, kAudioTxBufferSize);
-          }
-          if(length <= 1) wait(1.0);
-          if(status != 1) break;
-        }
-        if(status != 1) break;
+  uLCD.cls();
+  uLCD.locate(1,2);
+  uLCD.printf("102001122");
+  for(int k = 0; k < sizeof(beats)/sizeof(beats[0]); k++){
+      int index = beats[k];
+      for (int i = 0; i < kAudioTxBufferSize; i++)
+      {
+        waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song[index])) * ((1<<16) - 1));
       }
+      for(int j = 0; j < kAudioSampleFrequency / kAudioTxBufferSize; ++j)
+      {
+        audio.spk.play(waveform, kAudioTxBufferSize);
+      }
+      wait(1);
       audio.spk.pause();
-    //}
-  //}
-}
+  }
+  audio.spk.pause();
+  uLCD.cls();
+  uLCD.locate(1,2);
+  uLCD.printf("Your Score = %d",score);
 
-void loadSignalHandler(void){
-  queue.call(loadSignal);
 }
 
 void DNN_select(){
@@ -217,7 +210,6 @@ void DNN_select(){
     // return -1;
 
   }
-
   int input_length = model_input->bytes / sizeof(float);
   TfLiteStatus setup_status = SetupAccelerometer(error_reporter);
 
@@ -244,61 +236,24 @@ void DNN_select(){
     
     if (gesture_index < label_num) {
       error_reporter->Report(config.output_message[gesture_index]);
-      if(status == 2) {
-        
-        mode = (mode+1)%3;
-        uLCD.cls();
-        uLCD.locate(1,2);
-        if(mode == 0) uLCD.printf("Mode : Play next song");
-        else if(mode == 1)  uLCD.printf("Mode : Play previous song");
-        else if(mode == 2)  uLCD.printf("Mode : Pick song");
+      int target = int(timer.read());
+      if(gesture_index == 0 && beats[target] == 1){
+        score ++;
       }
-      else if(status == 3) {
-        songnum = (songnum+1)%3;
-        uLCD.cls();
-        uLCD.locate(1,2);
-        if(songnum == 0) uLCD.printf("Song 1");
-        else if(songnum == 1)  uLCD.printf("Song 2");
-        else if(songnum == 2)  uLCD.printf("Song 3");
+      else if(gesture_index == 2 && beats[target] == 2){
+        score ++;
       }
     }
-    if(status == 1) playNote();
   }
 }
 
-void change_status(void) {
-  
-  uLCD.cls();
-  uLCD.locate(1,2);
-  if(status == 0){
-    status = 1;
-    mode = 0;
-    uLCD.printf("Playing song %d now",songnum+1);
-  }
-  else if(status == 1){
-    uLCD.printf("Mode : Play next song");
-    status = 2;
-  }
-  else if(status == 2){
-    if(mode == 0 || mode == 1){
-      uLCD.printf("Push button to play!");
-      if(mode == 0) songnum = (songnum+1)%3;
-      else if(mode == 1) songnum = (songnum+2)%3;
-      status = 0;
-    }
-    else if(mode == 2){
-      uLCD.printf("Song %d",songnum+1);
-      status = 3;
-    }
-  }
-  else if(status == 3){
-    uLCD.printf("Push button to play!");
-    status = 0;
-  }
-  printf("%d\n",status);
-}
 void triggering(){
-  queue2.call(DNN_select);
+  timer.start();
+  score = 0;
+
+  queue.call(playNote2);
+  // queue.call(playNote);
+  //queue2.call(DNN_select);
 }
 
 int main(void)
@@ -307,11 +262,9 @@ int main(void)
   t.start(callback(&queue, &EventQueue::dispatch_forever));
   t2.start(callback(&queue2, &EventQueue::dispatch_forever));
 
-  loadSignal();
   uLCD.reset();
   uLCD.locate(1,2);
-  uLCD.printf("Push button to play!");
+  uLCD.printf("102001122");
   keyboard0.rise(triggering);
-  button.rise(queue.event(change_status));
   
 }

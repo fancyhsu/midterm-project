@@ -128,7 +128,7 @@ void loadSignal(void){
     if(pc.readable())
     {
       serialInBuffer[serialCount] = pc.getc();
-      //printf("%c",serialInBuffer[serialCount]);
+      
       serialCount++;
       if(serialCount == 7)
       {
@@ -136,6 +136,7 @@ void loadSignal(void){
         song[i/42][i%42] = (float) atof(serialInBuffer);
         serialCount = 0;
         i++;
+        printf("%f\r\n",(float) atof(serialInBuffer));
       }
     }
   }
@@ -295,7 +296,6 @@ void change_status(void) {
     uLCD.printf("Push button to play!");
     status = 0;
   }
-  printf("%d\n",status);
 }
 void triggering(){
   queue2.call(DNN_select);
