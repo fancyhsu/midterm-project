@@ -21,28 +21,36 @@ InterruptIn keyboard0(SW3);
 DigitalOut green_led(LED2);
 uLCD_4DGL uLCD(D1, D0, D2);
 
+Timer timer;
 EventQueue queue(32 * EVENTS_EVENT_SIZE);
 EventQueue queue2(32 * EVENTS_EVENT_SIZE);
 Thread t;
 Thread t2(osPriorityNormal,120*1024/*120K stack size*/);
 
-Timer timer;
-int score = 0;
+int idC = 0, songnum = 0, status = 0, mode = 0, score = 0;
 int16_t waveform[kAudioTxBufferSize];
 char serialInBuffer[42];
 int serialCount = 0;
 
-int beats[10] = {1,0,2,0,0,1,1,0,2,2};
-
-int song[3] = {0,261,392};
-
-int song1[42] = {
+float song[3][42]={
   261, 261, 392, 392, 440, 440, 392,
   349, 349, 330, 330, 294, 294, 261,
   392, 392, 349, 349, 330, 330, 294,
   392, 392, 349, 349, 330, 330, 294,
   261, 261, 392, 392, 440, 440, 392,
-  349, 349, 330, 330, 294, 294, 261};
+  349, 349, 330, 330, 294, 294, 261,
+  428, 428, 392, 392, 440, 440, 392,
+  500, 500, 330, 330, 258, 258, 428,
+  392, 392, 500, 500, 330, 330, 258,
+  392, 392, 500, 500, 330, 330, 258,
+  428, 428, 392, 392, 440, 440, 392,
+  500, 500, 330, 330, 258, 258, 428,
+  350, 350, 277, 277, 440, 440, 277,
+  349, 349, 488, 488, 294, 294, 350,
+  277, 277, 349, 349, 488, 488, 294,
+  277, 277, 349, 349, 488, 488, 294,
+  350, 350, 277, 277, 440, 440, 392,
+  349, 349, 488, 488, 294, 294, 261};
 
 int noteLength[42] = {
   1, 1, 1, 1, 1, 1, 2,
@@ -52,14 +60,67 @@ int noteLength[42] = {
   1, 1, 1, 1, 1, 1, 2,
   1, 1, 1, 1, 1, 1, 2};
 
+int beats[10] = {1,0,2,0,0,1,1,0,2,2};
+
+int PredictGesture(float* output) {
+  static int continuous_count = 0;
+  static int last_predict = -1;
+  int this_predict = -1;
+  for (int i = 0; i < label_num; i++) {
+    if (output[i] > 0.8) this_predict = i;
+  }
+  if (this_predict == -1) {
+    continuous_count = 0;
+    last_predict = label_num;
+    return label_num;
+  }
+  if (last_predict == this_predict) {
+    continuous_count += 1;
+  } else {
+    continuous_count = 0;
+  }
+  last_predict = this_predict;
+  if (continuous_count < config.consecutiveInferenceThresholds[this_predict]) {
+    return label_num;
+  }
+  continuous_count = 0;
+  last_predict = -1;
+  return this_predict;
+}
+
+void loadSignal(void){
+  green_led = 0;
+  int i = 0;
+  serialCount = 0;
+  while(i < 42)
+  {
+    if(pc.readable())
+    {
+      serialInBuffer[serialCount] = pc.getc();
+      
+      serialCount++;
+      if(serialCount == 7)
+      {
+        serialInBuffer[serialCount] = '\0';
+        song[i/42][i%42] = (float) atof(serialInBuffer);
+        serialCount = 0;
+        i++;
+        printf("%f\r\n",(float) atof(serialInBuffer));
+      }
+    }
+  }
+  green_led = 1;
+}
+
 void playNote2(){
       for(int k = 0; k < 42; k++){
+        if(timer.read()>10 || status != 4) break;
         int length = noteLength[k];
         while(length--)
         {
           for (int i = 0; i < kAudioTxBufferSize; i++)
           {
-            waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song1[k])) * ((1<<16) - 1));
+            waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song[0][k])) * ((1<<16) - 1));
           }
           for(int j = 0; j < kAudioSampleFrequency / kAudioTxBufferSize; ++j)
           {
@@ -69,101 +130,35 @@ void playNote2(){
         }
       }
       audio.spk.pause();
-}
-
-
-int PredictGesture(float* output) {
-
-  // How many times the most recent gesture has been matched in a row
-
-  static int continuous_count = 0;
-
-  // The result of the last prediction
-
-  static int last_predict = -1;
-
-
-  // Find whichever output has a probability > 0.8 (they sum to 1)
-
-  int this_predict = -1;
-
-  for (int i = 0; i < label_num; i++) {
-
-    if (output[i] > 0.8) this_predict = i;
-
-  }
-
-  // No gesture was detected above the threshold
-
-  if (this_predict == -1) {
-
-    continuous_count = 0;
-
-    last_predict = label_num;
-
-    return label_num;
-
-  }
-
-
-  if (last_predict == this_predict) {
-
-    continuous_count += 1;
-
-  } else {
-
-    continuous_count = 0;
-
-  }
-
-  last_predict = this_predict;
-
-
-  // If we haven't yet had enough consecutive matches for this gesture,
-
-  // report a negative result
-
-  if (continuous_count < config.consecutiveInferenceThresholds[this_predict]) {
-
-    return label_num;
-
-  }
-
-  // Otherwise, we've seen a positive result, so clear all our variables
-
-  // and report it
-
-  continuous_count = 0;
-
-  last_predict = -1;
-
-
-  return this_predict;
-
+      uLCD.cls();
+      uLCD.locate(1,2);
+      uLCD.printf("Your Score = %d",score);
 }
 
 void playNote(){
-  uLCD.cls();
-  uLCD.locate(1,2);
-  uLCD.printf("102001122");
-  for(int k = 0; k < sizeof(beats)/sizeof(beats[0]); k++){
-      int index = beats[k];
-      for (int i = 0; i < kAudioTxBufferSize; i++)
-      {
-        waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song[index])) * ((1<<16) - 1));
+      for(int k = 0; k < 42; k++){
+        int length = noteLength[k];
+        while(length--)
+        {
+          for (int i = 0; i < kAudioTxBufferSize; i++)
+          {
+            waveform[i] = (int16_t) (sin((double)i * 2. * M_PI/(double) (kAudioSampleFrequency / song[songnum][k])) * ((1<<16) - 1));
+          }
+          for(int j = 0; j < kAudioSampleFrequency / kAudioTxBufferSize; ++j)
+          {
+            audio.spk.play(waveform, kAudioTxBufferSize);
+          }
+          if(length <= 1) wait(1.0);
+          if(status != 1) break;
+        }
+        if(status != 1) break;
       }
-      for(int j = 0; j < kAudioSampleFrequency / kAudioTxBufferSize; ++j)
-      {
-        audio.spk.play(waveform, kAudioTxBufferSize);
-      }
-      wait(1);
       audio.spk.pause();
-  }
-  audio.spk.pause();
-  uLCD.cls();
-  uLCD.locate(1,2);
-  uLCD.printf("Your Score = %d",score);
+      
+}
 
+void loadSignalHandler(void){
+  queue.call(loadSignal);
 }
 
 void DNN_select(){
@@ -210,6 +205,7 @@ void DNN_select(){
     // return -1;
 
   }
+
   int input_length = model_input->bytes / sizeof(float);
   TfLiteStatus setup_status = SetupAccelerometer(error_reporter);
 
@@ -236,24 +232,82 @@ void DNN_select(){
     
     if (gesture_index < label_num) {
       error_reporter->Report(config.output_message[gesture_index]);
-      int target = int(timer.read());
-      if(gesture_index == 0 && beats[target] == 1){
-        score ++;
+      if(status == 2) {
+        
+        mode = (mode+1)%4;
+        uLCD.cls();
+        uLCD.locate(1,2);
+        if(mode == 0) uLCD.printf("Mode : Play next song");
+        else if(mode == 1)  uLCD.printf("Mode : Play previous song");
+        else if(mode == 2)  uLCD.printf("Mode : Pick song");
+        else if(mode == 3)  uLCD.printf("Mode : Taiko");
       }
-      else if(gesture_index == 2 && beats[target] == 2){
-        score ++;
+      else if(status == 3) {
+        songnum = (songnum+1)%3;
+        uLCD.cls();
+        uLCD.locate(1,2);
+        if(songnum == 0) uLCD.printf("Song 1");
+        else if(songnum == 1)  uLCD.printf("Song 2");
+        else if(songnum == 2)  uLCD.printf("Song 3");
+      }
+      else if(status == 4) {
+        int target = int(timer.read());
+        if(gesture_index == 0 && beats[target] == 1){
+          score ++;
+        }
+        else if(gesture_index == 2 && beats[target] == 2){
+          score ++;
+        }
       }
     }
+    if(status == 1) playNote();
   }
 }
 
+void change_status(void) {
+  
+  uLCD.cls();
+  uLCD.locate(1,2);
+  if(status == 0){
+    status = 1;
+    mode = 0;
+    uLCD.printf("Playing song %d now",songnum+1);
+  }
+  else if(status == 1){
+    uLCD.printf("Mode : Play next song");
+    status = 2;
+  }
+  else if(status == 2){
+    if(mode == 0 || mode == 1){
+      uLCD.printf("Push button to play!");
+      if(mode == 0) songnum = (songnum+1)%3;
+      else if(mode == 1) songnum = (songnum+2)%3;
+      status = 0;
+    }
+    else if(mode == 2){
+      uLCD.printf("Song %d",songnum+1);
+      status = 3;
+    }
+    else if(mode == 3){
+      score = 0;
+      uLCD.printf("Taiko : 1020011022");
+      timer.reset();
+      timer.start();
+      queue.call(playNote2);
+      status = 4;
+    }
+  }
+  else if(status == 3){
+    uLCD.printf("Push button to play!");
+    status = 0;
+  }
+  else if(status == 4){
+    status = 2;
+    uLCD.printf("Mode : Play next song");
+  }
+}
 void triggering(){
-  timer.start();
-  score = 0;
-
-  queue.call(playNote2);
-  // queue.call(playNote);
-  //queue2.call(DNN_select);
+  queue2.call(DNN_select);
 }
 
 int main(void)
@@ -262,9 +316,11 @@ int main(void)
   t.start(callback(&queue, &EventQueue::dispatch_forever));
   t2.start(callback(&queue2, &EventQueue::dispatch_forever));
 
+  //loadSignalHandler();
   uLCD.reset();
   uLCD.locate(1,2);
-  uLCD.printf("102001122");
+  uLCD.printf("Push button to play!");
   keyboard0.rise(triggering);
+  button.rise(queue.event(change_status));
   
 }

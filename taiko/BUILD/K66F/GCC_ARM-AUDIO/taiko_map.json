@@ -35,21 +35,21 @@
     {
         "module": "[fill]",
         "size": {
-            ".text": 228,
-            ".data": 7,
-            ".bss": 48,
-            ".text-delta": -63,
-            ".data-delta": -10,
-            ".bss-delta": -6
+            ".text": 292,
+            ".data": 17,
+            ".bss": 58,
+            ".text-delta": -4,
+            ".data-delta": 0,
+            ".bss-delta": 0
         }
     },
     {
         "module": "[lib]/c.a",
         "size": {
-            ".text": 31117,
+            ".text": 31281,
             ".data": 2472,
             ".bss": 89,
-            ".text-delta": -164,
+            ".text-delta": 0,
             ".data-delta": 0,
             ".bss-delta": 0
         }
@@ -57,10 +57,10 @@
     {
         "module": "[lib]/gcc.a",
         "size": {
-            ".text": 3112,
+            ".text": 3992,
             ".data": 0,
             ".bss": 0,
-            ".text-delta": -880,
+            ".text-delta": 0,
             ".data-delta": 0,
             ".bss-delta": 0
         }
@@ -68,11 +68,11 @@
     {
         "module": "[lib]/m.a",
         "size": {
-            ".text": 5328,
-            ".data": 0,
+            ".text": 7389,
+            ".data": 1,
             ".bss": 0,
-            ".text-delta": -2061,
-            ".data-delta": -1,
+            ".text-delta": 0,
+            ".data-delta": 0,
             ".bss-delta": 0
         }
     },
@@ -90,10 +90,10 @@
     {
         "module": "[lib]/nosys.a",
         "size": {
-            ".text": 0,
+            ".text": 32,
             ".data": 0,
             ".bss": 0,
-            ".text-delta": -32,
+            ".text-delta": 0,
             ".data-delta": 0,
             ".bss-delta": 0
         }
@@ -112,21 +112,21 @@
     {
         "module": "accelerometer_handler.o",
         "size": {
-            ".text": 60,
-            ".data": 0,
-            ".bss": 24,
-            ".text-delta": -524,
-            ".data-delta": -9,
-            ".bss-delta": -2414
+            ".text": 584,
+            ".data": 9,
+            ".bss": 2438,
+            ".text-delta": 0,
+            ".data-delta": 0,
+            ".bss-delta": 0
         }
     },
     {
         "module": "magic_wand_model_data.o",
         "size": {
-            ".text": 0,
+            ".text": 12384,
             ".data": 0,
             ".bss": 0,
-            ".text-delta": -12384,
+            ".text-delta": 0,
             ".data-delta": 0,
             ".bss-delta": 0
         }
@@ -134,12 +134,12 @@
     {
         "module": "main.o",
         "size": {
-            ".text": 1004,
-            ".data": 336,
-            ".bss": 3006,
-            ".text-delta": -1696,
-            ".data-delta": -76,
-            ".bss-delta": -360
+            ".text": 3977,
+            ".data": 748,
+            ".bss": 3378,
+            ".text-delta": 12,
+            ".data-delta": 0,
+            ".bss-delta": 0
         }
     },
     {
@@ -156,10 +156,10 @@
     {
         "module": "mbed-os/drivers",
         "size": {
-            ".text": 1934,
+            ".text": 2224,
             ".data": 0,
             ".bss": 44,
-            ".text-delta": -290,
+            ".text-delta": 0,
             ".data-delta": 0,
             ".bss-delta": 0
         }
@@ -167,7 +167,7 @@
     {
         "module": "mbed-os/events",
         "size": {
-            ".text": 1273,
+            ".text": 1285,
             ".data": 0,
             ".bss": 0,
             ".text-delta": 0,
@@ -189,10 +189,10 @@
     {
         "module": "mbed-os/platform",
         "size": {
-            ".text": 6376,
+            ".text": 6676,
             ".data": 261,
             ".bss": 309,
-            ".text-delta": -300,
+            ".text-delta": 0,
             ".data-delta": 0,
             ".bss-delta": 0
         }
@@ -211,10 +211,10 @@
     {
         "module": "mbed-os/targets",
         "size": {
-            ".text": 13725,
+            ".text": 14049,
             ".data": 36,
             ".bss": 966,
-            ".text-delta": -324,
+            ".text-delta": 0,
             ".data-delta": 0,
             ".bss-delta": 0
         }
@@ -222,20 +222,20 @@
     {
         "module": "tensorflowlite_mbed/tensorflow",
         "size": {
-            ".text": 0,
-            ".data": 0,
-            ".bss": 0,
-            ".text-delta": -27504,
-            ".data-delta": -192,
-            ".bss-delta": -108
+            ".text": 27502,
+            ".data": 192,
+            ".bss": 108,
+            ".text-delta": 0,
+            ".data-delta": 0,
+            ".bss-delta": 0
         }
     },
     {
         "summary": {
-            "static_ram": 14568,
-            "static_ram_delta": -3176,
-            "total_flash": 81766,
-            "total_flash_delta": -46510
+            "static_ram": 18096,
+            "static_ram_delta": 0,
+            "total_flash": 129900,
+            "total_flash_delta": 8
         }
     }
 ]
